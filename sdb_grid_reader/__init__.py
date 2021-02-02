@@ -1,7 +1,14 @@
+from zipfile import ZipFile
+
+import matplotlib.pyplot as plt
 import mesa_reader as mesa
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
+import shutil
+import os
+
+import gyre_data
 
 
 class SdbGridReader():
@@ -9,199 +16,199 @@ class SdbGridReader():
 
     """
 
-    def __init__(self, db_file: str, grid_dir: str):
+    def __init__(self, db_file, grid_dir, zipped_dir=True):
         self.db_file = db_file
         self.grid_dir = grid_dir
         engine = create_engine(f'sqlite:///{self.db_file}')
         self.data = pd.read_sql('models', engine)
+    
 
-
-class GyreData():
-
-    """Structure containing data from a GYRE output file.
-
-        Assumes the following structure of a file:
-
-        line 1: blank
-        line 2: header numbers
-        line 3: header names
-        line 4: header data
-        line 5: body numbers
-        line 6: body names
-        lines 7-: body data
-
-    Ispired by Bill Wolf's PyMesaReader:
-    https://github.com/wmwolf/py_mesa_reader
-
-    Parameters
-    ----------
-    file_name : str
-        The name of GYRE output file to be read in.
-
-    Attributes
-    ----------
-    file_name : str
-        Path to the GYRE output file.
-    bulk_data : numpy.ndarray
-        The main data in the structured array format.
-    bulk_names : tuple of str
-        List of all available data column names.
-    header_data : dict
-        Header data in dict format.
-    header_names : list of str
-        List of all available header names.
-    """
-
-    header_names_line = 3
-    body_names_line = 6
-
-    @classmethod
-    def set_header_names_line(cls, name_line=2):
-        cls.header_names_line = name_line
-
-    @classmethod
-    def set_body_names_line(cls, name_line=6):
-        cls.bulk_names_line = name_line
-
-    def __init__(self, file_name):
-        """Make a GyreData object from a GYRE output file.
-
-        Assumes the following structure of a file:
-
-        line 1: blank
-        line 2: header numbers
-        line 3: header names
-        line 4: header data
-        line 5: body numbers
-        line 6: body names
-        lines 7-: body data
-
-        This structure can be altered by the class methods
-        'GyreData.set_header_names_line' and 'GyreData.set_body_names_line'.
-
-        Parameters
-        ----------
-        file_name : str
-            The name of GYRE output file to be read in.
-        """
-
-        self.file_name = file_name
-        self.header_names = None
-        self.header_data = None
-        self.body_names = None
-        self.body_data = None
-        self.read_gyre()
-
-    def read_gyre(self):
-        """Reads data from a GYRE output file.
+    def extract_evol_model(self, log_dir, top_dir, he4, dest_dir):
+        """Extracts a single evolutionary model.
         
         Parameters
         ----------
-
-        Returns
-        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+        dest_dir : str
+            Destination directory.
         
-        """
-
-        self.body_data = np.genfromtxt(
-            self.file_name, skip_header=GyreData.body_names_line - 1,
-            names=True, dtype=None)
-
-        self.body_names = self.body_data.dtype.names
-
-        header_data = []
-        with open(self.file_name) as f:
-            for i, line in enumerate(f):
-                if i == GyreData.header_names_line - 1:
-                    self.header_names = line.split()
-                elif i == GyreData.header_names_line:
-                    header_data = [float(v) for v in line.split()]
-                elif i > GyreData.header_names_line:
-                    break
-        self.header_data = dict(zip(self.header_names, header_data))
-
-    def is_in_header(self, key):
-        """Determine if 'key' exists in header data.
-
-        Parameters
-        ----------
-        key : str
-            The string to test if it is in header names.
-
         Returns
         ----------
-        bool
-            True if 'key' is in header names, otherwise False.
-        """
-        return key in self.header_names
-
-    def is_in_data(self, key):
-        """Determine if 'key' exists in body data.
-
-        Parameters
-        ----------
-        key : str
-            The string to test if it is a valid column name.
-
-        Returns
-        -------
-        bool
-            True if 'key' is a valid column name, otherwise False.
-        """
-        return key in self.body_names
-
-    def header(self, key):
-        """Returns a header value for 'key'.
-
-        Parameters
-        ----------
-        key : str
-            The name of in header.
-
-        Returns
-        ----------
-        numpy.ndarray
-            A value for the name 'key'.
 
         Raises
         ----------
-        KeyError
-            If 'key' is an invalid key.
+        OSError
+            If model with abundance 'he4' does not exist.
         """
 
-        if self.is_in_header(key):
-            return self.header_data[key]
-        else:
-            raise KeyError(f"{key:s} is not a valid data type")
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        model_name = self.evol_model_name(he4)
+        grid_zip_path = os.path.join(top_dir, log_dir, model_name)
+        dest_path = os.path.join(dest_dir, model_name)
+        
+        with ZipFile(grid_zip_file) as archive:
+            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                shutil.copyfileobj(zipped_file, dest_file)
+    
 
-    def data(self, key):
-        """Returns numpy array with the data column for 'key'.
-
+    def extract_puls_model(self, log_dir, top_dir, he4, dest_dir):
+        """Extracts a single calculated GYRE model.
+        
         Parameters
         ----------
-        key : str
-            The name of data column.
-
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+        dest_dir : str
+            Destination directory.
+        
         Returns
         ----------
-        numpy.ndarray
-            An array with data correspoding to the name 'key'.
 
         Raises
         ----------
-        KeyError
-            If 'key' is an invalid key.
+        OSError
+            If model with abundance 'he4' does not exist.
         """
 
-        if self.is_in_data(key):
-            return self.body_data[key]
-        else:
-            raise KeyError(f"{key:s} is not a valid data type")
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        model_name = self.puls_model_name(he4)
+        grid_zip_path = os.path.join(top_dir, log_dir, model_name)
+        dest_path = os.path.join(dest_dir, model_name)
+        
+        with ZipFile(grid_zip_file) as archive:
+            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                shutil.copyfileobj(zipped_file, dest_file)
+    
+
+    def extract_gyre_input_model(self, log_dir, top_dir, he4, dest_dir):
+        """Extracts a single GYRE input model.
+        
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+        dest_dir : str
+            Destination directory.
+        
+        Returns
+        ----------
+
+        Raises
+        ----------
+        OSError
+            If model with abundance 'he4' does not exist.
+        """
+
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        model_name = self.gyre_input_name(he4)
+        grid_zip_path = os.path.join(top_dir, log_dir, model_name)
+        dest_path = os.path.join(dest_dir, model_name)
+        
+        with ZipFile(grid_zip_file) as archive:
+            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                shutil.copyfileobj(zipped_file, dest_file)
+    
+    
+    @staticmethod
+    def archive_name(top_dir):
+        """Returns a name of a zip file containing a top direcotry.
+        
+        Parameters
+        ----------
+        top_dir : str
+            Top directory.
+
+        Returns
+        ----------
+        str
+            Name of zipfile.
+        """
+        
+        return f"grid{top_dir[4:]}.zip"
+    
+    @staticmethod
+    def evol_model_name(he4):
+        """Returns a name of a MESA profile for helium abundance 'he4'.
+        
+        Parameters
+        ----------
+        he4 : float
+            Central helium abundance of the model.
+
+        Returns
+        ----------
+        str
+            Name of MESA profile.
+        """
+        
+        return f"custom_He{round(he4, 6)}.data"
+
+    @staticmethod
+    def puls_model_name(he4):
+        """Returns a name of a calculated GYRE model for helium abundance 'he4'.
+        
+        Parameters
+        ----------
+        he4 : float
+            Central helium abundance of the model.
+
+        Returns
+        ----------
+        str
+            Name of calculated GYRE model.
+        """
+        
+        return f"custom_He{round(he4, 6)}_summary.txt"
+    
+    @staticmethod
+    def gyre_input_name(he4):
+        """Returns a name of an input model for GYRE model for helium abundance 'he4'.
+        
+        Parameters
+        ----------
+        he4 : float
+            Central helium abundance of the model.
+
+        Returns
+        ----------
+        str
+            Name of GYRE input model.
+        """
+        
+        return f"custom_He{round(he4, 6)}.data.GYRE"
+
+
+
 
 
 if __name__ == "__main__":
-    database = '/Users/cespenar/sdb/sdb_grid.db'
+    database = '/Users/cespenar/sdb/sdb_grid_cpm.db'
     grid_dir = '/Volumes/T3_2TB/sdb/grid_sdb'
     g = SdbGridReader(database, grid_dir)
 
-    print(g.data.head())
+    # top_dir = 'logs_mi1.0_z0.015_lvl0'
+    # log_dir = 'logs_mi1.0_menv0.0001_rot0.0_z0.015_y0.2715_fh0.0_fhe0.0_fsh0.0_mlt1.8_sc0.1_reimers0.0_blocker0.0_turbulence0.0_lvl0_15240'
+    # he4 = 0.5
+    # destination = os.getcwd()
+    # g.extract_evol_model(log_dir, top_dir, he4, destination)
+
+    # print(g.data.head())
+
+    # df = g.data
+    # plt.plot(10.0 ** df.log_Teff, df.log_g, 'k.')
+    # plt.gca().invert_xaxis()
+    # plt.gca().invert_yaxis()
+    # plt.show()
