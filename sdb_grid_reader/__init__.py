@@ -1,3 +1,5 @@
+import os
+import shutil
 from zipfile import ZipFile
 
 import matplotlib.pyplot as plt
@@ -5,8 +7,6 @@ import mesa_reader as mesa
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
-import shutil
-import os
 
 import gyre_data
 
@@ -21,11 +21,38 @@ class SdbGridReader():
         self.grid_dir = grid_dir
         engine = create_engine(f'sqlite:///{self.db_file}')
         self.data = pd.read_sql('models', engine)
-    
+
+    def extract_history(self, log_dir, top_dir, dest_dir, rename=False):
+        """Extracts a MESA history file.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        dest_dir : str
+            Destination directory.
+        rename : bool
+            If True it renames the history file to include information about
+            the model contained in log_dir.
+
+        Returns
+        ----------
+        """
+
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        history_name = f'history{log_dir[4:]}.data' if rename else 'history.data'
+        grid_zip_path = os.path.join(top_dir, log_dir, history_name)
+        dest_path = os.path.join(dest_dir, history_name)
+
+        with ZipFile(grid_zip_file) as archive:
+            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                shutil.copyfileobj(zipped_file, dest_file)
 
     def extract_evol_model(self, log_dir, top_dir, he4, dest_dir):
-        """Extracts a single evolutionary model.
-        
+        """Extracts a single evolutionary model (a profile).
+
         Parameters
         ----------
         log_dir : str
@@ -36,7 +63,7 @@ class SdbGridReader():
             Central helium abundance of the required model.
         dest_dir : str
             Destination directory.
-        
+
         Returns
         ----------
 
@@ -50,15 +77,14 @@ class SdbGridReader():
         model_name = self.evol_model_name(he4)
         grid_zip_path = os.path.join(top_dir, log_dir, model_name)
         dest_path = os.path.join(dest_dir, model_name)
-        
+
         with ZipFile(grid_zip_file) as archive:
             with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
                 shutil.copyfileobj(zipped_file, dest_file)
-    
 
     def extract_puls_model(self, log_dir, top_dir, he4, dest_dir):
         """Extracts a single calculated GYRE model.
-        
+
         Parameters
         ----------
         log_dir : str
@@ -69,7 +95,7 @@ class SdbGridReader():
             Central helium abundance of the required model.
         dest_dir : str
             Destination directory.
-        
+
         Returns
         ----------
 
@@ -83,15 +109,14 @@ class SdbGridReader():
         model_name = self.puls_model_name(he4)
         grid_zip_path = os.path.join(top_dir, log_dir, model_name)
         dest_path = os.path.join(dest_dir, model_name)
-        
+
         with ZipFile(grid_zip_file) as archive:
             with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
                 shutil.copyfileobj(zipped_file, dest_file)
-    
 
     def extract_gyre_input_model(self, log_dir, top_dir, he4, dest_dir):
         """Extracts a single GYRE input model.
-        
+
         Parameters
         ----------
         log_dir : str
@@ -102,7 +127,7 @@ class SdbGridReader():
             Central helium abundance of the required model.
         dest_dir : str
             Destination directory.
-        
+
         Returns
         ----------
 
@@ -116,16 +141,99 @@ class SdbGridReader():
         model_name = self.gyre_input_name(he4)
         grid_zip_path = os.path.join(top_dir, log_dir, model_name)
         dest_path = os.path.join(dest_dir, model_name)
-        
+
         with ZipFile(grid_zip_file) as archive:
             with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
                 shutil.copyfileobj(zipped_file, dest_file)
-    
-    
+
+    def evol_model_exists(self, log_dir, top_dir, he4):
+        """Checks if a profile exists in archive.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+
+        Returns
+        ----------
+        bool
+            True if a profile exists, False otherwise.
+        """
+
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        model_name = self.evol_model_name(he4)
+        grid_zip_path = os.path.join(top_dir, log_dir, model_name)
+
+        with ZipFile(grid_zip_file) as archive:
+            if grid_zip_path in archive.namelist():
+                return True
+            else:
+                return False
+
+    def puls_model_exists(self, log_dir, top_dir, he4):
+        """Checks if a calculated GYRE model exists in archive.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+
+        Returns
+        ----------
+        bool
+            True if a profile exists, False otherwise.
+        """
+
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        model_name = self.puls_model_name(he4)
+        grid_zip_path = os.path.join(top_dir, log_dir, model_name)
+
+        with ZipFile(grid_zip_file) as archive:
+            if grid_zip_path in archive.namelist():
+                return True
+            else:
+                return False
+
+    def gyre_input_exists(self, log_dir, top_dir, he4):
+        """Checks if a GYRE input model exists in archive.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+
+        Returns
+        ----------
+        bool
+            True if a profile exists, False otherwise.
+        """
+
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        model_name = self.gyre_input_name(he4)
+        grid_zip_path = os.path.join(top_dir, log_dir, model_name)
+
+        with ZipFile(grid_zip_file) as archive:
+            if grid_zip_path in archive.namelist():
+                return True
+            else:
+                return False
+
     @staticmethod
     def archive_name(top_dir):
         """Returns a name of a zip file containing a top direcotry.
-        
+
         Parameters
         ----------
         top_dir : str
@@ -136,13 +244,13 @@ class SdbGridReader():
         str
             Name of zipfile.
         """
-        
+
         return f"grid{top_dir[4:]}.zip"
-    
+
     @staticmethod
     def evol_model_name(he4):
         """Returns a name of a MESA profile for helium abundance 'he4'.
-        
+
         Parameters
         ----------
         he4 : float
@@ -153,13 +261,13 @@ class SdbGridReader():
         str
             Name of MESA profile.
         """
-        
+
         return f"custom_He{round(he4, 6)}.data"
 
     @staticmethod
     def puls_model_name(he4):
         """Returns a name of a calculated GYRE model for helium abundance 'he4'.
-        
+
         Parameters
         ----------
         he4 : float
@@ -170,13 +278,13 @@ class SdbGridReader():
         str
             Name of calculated GYRE model.
         """
-        
+
         return f"custom_He{round(he4, 6)}_summary.txt"
-    
+
     @staticmethod
     def gyre_input_name(he4):
         """Returns a name of an input model for GYRE model for helium abundance 'he4'.
-        
+
         Parameters
         ----------
         he4 : float
@@ -187,11 +295,8 @@ class SdbGridReader():
         str
             Name of GYRE input model.
         """
-        
+
         return f"custom_He{round(he4, 6)}.data.GYRE"
-
-
-
 
 
 if __name__ == "__main__":
