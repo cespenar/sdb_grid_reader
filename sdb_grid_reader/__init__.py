@@ -66,11 +66,6 @@ class SdbGridReader():
 
         Returns
         ----------
-
-        Raises
-        ----------
-        OSError
-            If model with abundance 'he4' does not exist.
         """
 
         grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
@@ -79,8 +74,9 @@ class SdbGridReader():
         dest_path = os.path.join(dest_dir, model_name)
 
         with ZipFile(grid_zip_file) as archive:
-            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
-                shutil.copyfileobj(zipped_file, dest_file)
+            if grid_zip_path in archive.namelist():
+                with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                    shutil.copyfileobj(zipped_file, dest_file)
 
     def extract_puls_model(self, log_dir, top_dir, he4, dest_dir):
         """Extracts a single calculated GYRE model.
@@ -98,11 +94,6 @@ class SdbGridReader():
 
         Returns
         ----------
-
-        Raises
-        ----------
-        OSError
-            If model with abundance 'he4' does not exist.
         """
 
         grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
@@ -111,8 +102,9 @@ class SdbGridReader():
         dest_path = os.path.join(dest_dir, model_name)
 
         with ZipFile(grid_zip_file) as archive:
-            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
-                shutil.copyfileobj(zipped_file, dest_file)
+            if grid_zip_path in archive.namelist():
+                with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                    shutil.copyfileobj(zipped_file, dest_file)
 
     def extract_gyre_input_model(self, log_dir, top_dir, he4, dest_dir):
         """Extracts a single GYRE input model.
@@ -130,11 +122,6 @@ class SdbGridReader():
 
         Returns
         ----------
-
-        Raises
-        ----------
-        OSError
-            If model with abundance 'he4' does not exist.
         """
 
         grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
@@ -143,8 +130,9 @@ class SdbGridReader():
         dest_path = os.path.join(dest_dir, model_name)
 
         with ZipFile(grid_zip_file) as archive:
-            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
-                shutil.copyfileobj(zipped_file, dest_file)
+            if grid_zip_path in archive.namelist():
+                with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                    shutil.copyfileobj(zipped_file, dest_file)
 
     def evol_model_exists(self, log_dir, top_dir, he4):
         """Checks if a profile exists in archive.
