@@ -22,6 +22,100 @@ class SdbGridReader():
         engine = create_engine(f'sqlite:///{self.db_file}')
         self.data = pd.read_sql('models', engine)
 
+    def read_history(self, log_dir, top_dir, he4, temp_dir='.', delete_temp=True, rename=False):
+        """Reads a single evolutionary model (a profile) and returns
+        a MesaData object.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+        temp_dir : str, optional
+            Temporary dirctory for the required model. Default: '.'.
+        delete_temp : bool, optional
+            If True delete the temporary model. Default: True.
+        rename : bool, optional
+            If True it renames the history file to include information about
+            the model contained in log_dir.
+
+        Returns
+        ----------
+        MesaData
+            Evolutionary model (MESA profile file) as MesaData object.
+        """
+
+        self.extract_history(log_dir, top_dir, temp_dir, rename)
+        history_name = f'history{log_dir[4:]}.data' if rename else 'history.data'
+        temp_file = os.path.join(temp_dir, history_name)
+        data = mesa.MesaData(temp_file)
+        if delete_temp:
+            os.remove(temp_file)
+        return data
+    
+    def read_evol_model(self, log_dir, top_dir, he4, temp_dir='.', delete_temp=True):
+        """Reads a single evolutionary model (a profile) and returns
+        a MesaData object.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+        temp_dir : str, optional
+            Temporary dirctory for the required model. Default: '.'.
+        delete_temp : bool, optional
+            If True delete the temporary model. Default: True.
+
+        Returns
+        ----------
+        MesaData
+            Evolutionary model (MESA profile file) as MesaData object.
+        """
+
+        self.extract_evol_model(log_dir, top_dir, he4, temp_dir)
+        temp_file = os.path.join(temp_dir, self.evol_model_name(he4))
+        data = mesa.MesaData(temp_file)
+        if delete_temp:
+            os.remove(temp_file)
+        return data
+    
+    def read_puls_model(self, log_dir, top_dir, he4, temp_dir='.', delete_temp=True):
+        """Reads a calculated GYRE model and returns
+        a GyreData object.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        he4 : float
+            Central helium abundance of the required model.
+        temp_dir : str, optional
+            Temporary dirctory for the required model. Default: '.'.
+        delete_temp : bool, optional
+            If True delete the temporary model. Default: True.
+
+        Returns
+        ----------
+        GyreData
+            Pulsation model as GyreData object.
+        """
+
+        self.extract_puls_model(log_dir, top_dir, he4, temp_dir)
+        temp_file = os.path.join(temp_dir, self.puls_model_name(he4))
+        data = gyre_data.GyreData(temp_file)
+        if delete_temp:
+            os.remove(temp_file)
+        return data
+    
     def extract_history(self, log_dir, top_dir, dest_dir, rename=False):
         """Extracts a MESA history file.
 
@@ -35,7 +129,7 @@ class SdbGridReader():
             Destination directory.
         rename : bool
             If True it renames the history file to include information about
-            the model contained in log_dir.
+            the model contained in log_dir. Default: False.
 
         Returns
         ----------
@@ -292,11 +386,14 @@ if __name__ == "__main__":
     grid_dir = '/Volumes/T3_2TB/sdb/grid_sdb'
     g = SdbGridReader(database, grid_dir)
 
-    # top_dir = 'logs_mi1.0_z0.015_lvl0'
-    # log_dir = 'logs_mi1.0_menv0.0001_rot0.0_z0.015_y0.2715_fh0.0_fhe0.0_fsh0.0_mlt1.8_sc0.1_reimers0.0_blocker0.0_turbulence0.0_lvl0_15240'
-    # he4 = 0.5
+    top_dir = 'logs_mi1.0_z0.015_lvl0'
+    log_dir = 'logs_mi1.0_menv0.0001_rot0.0_z0.015_y0.2715_fh0.0_fhe0.0_fsh0.0_mlt1.8_sc0.1_reimers0.0_blocker0.0_turbulence0.0_lvl0_15240'
+    he4 = 0.5
     # destination = os.getcwd()
     # g.extract_evol_model(log_dir, top_dir, he4, destination)
+
+    # data = g.read_evol_model(log_dir, top_dir, he4)
+    data = g.read_puls_model(log_dir, top_dir, he4)
 
     # print(g.data.head())
 
