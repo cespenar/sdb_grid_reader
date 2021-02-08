@@ -22,7 +22,8 @@ class SdbGridReader():
         engine = create_engine(f'sqlite:///{self.db_file}')
         self.data = pd.read_sql('models', engine)
 
-    def read_history(self, log_dir, top_dir, he4, temp_dir='.', delete_temp=True, rename=False):
+    def read_history(self, log_dir, top_dir, he4, dest_dir='.', delete_file=True,
+                     rename=False, keep_tree=False):
         """Reads a single evolutionary model (a profile) and returns
         a MesaData object.
 
@@ -34,13 +35,18 @@ class SdbGridReader():
             Top directory.
         he4 : float
             Central helium abundance of the required model.
-        temp_dir : str, optional
+        dest_dir : str, optional
             Temporary dirctory for the required model. Default: '.'.
-        delete_temp : bool, optional
-            If True delete the temporary model. Default: True.
+        delete_file : bool, optional
+            If True delete the extracted model. The model is not deleted
+            if 'keep_tree' is True. Default: True.
         rename : bool, optional
             If True it renames the history file to include information about
             the model contained in log_dir.
+        keep_tree : bool, optional
+            If True extract file with its directory structure (default
+            ZipFile.extract behaviour), otherwise extract file directly to
+            'dest_dir'. Default: False.
 
         Returns
         ----------
@@ -48,15 +54,20 @@ class SdbGridReader():
             Evolutionary model (MESA profile file) as MesaData object.
         """
 
-        self.extract_history(log_dir, top_dir, temp_dir, rename)
+        self.extract_history(log_dir, top_dir, dest_dir, rename, keep_tree)
         history_name = f'history{log_dir[4:]}.data' if rename else 'history.data'
-        temp_file = os.path.join(temp_dir, history_name)
-        data = mesa.MesaData(temp_file)
-        if delete_temp:
-            os.remove(temp_file)
+        if keep_tree:
+            file_name = os.path.join(
+                dest_dir, top_dir, log_dir, self.evol_model_name(he4))
+        else:
+            file_name = os.path.join(dest_dir, history_name)
+        data = mesa.MesaData(file_name)
+        if delete_file and not keep_tree:
+            os.remove(file_name)
         return data
-    
-    def read_evol_model(self, log_dir, top_dir, he4, temp_dir='.', delete_temp=True):
+
+    def read_evol_model(self, log_dir, top_dir, he4, dest_dir='.',
+                        delete_file=True, keep_tree=False):
         """Reads a single evolutionary model (a profile) and returns
         a MesaData object.
 
@@ -68,10 +79,15 @@ class SdbGridReader():
             Top directory.
         he4 : float
             Central helium abundance of the required model.
-        temp_dir : str, optional
-            Temporary dirctory for the required model. Default: '.'.
-        delete_temp : bool, optional
-            If True delete the temporary model. Default: True.
+        dest_dir : str, optional
+            Dirctory for the required model. Default: '.'.
+        delete_file : bool, optional
+            If True delete the extracted model. The model is not deleted
+            if 'keep_tree' is True. Default: True.
+        keep_tree : bool, optional
+            If True extract file with its directory structure (default
+            ZipFile.extract behaviour), otherwise extract file directly to
+            'dest_dir'. Default: False.
 
         Returns
         ----------
@@ -79,14 +95,19 @@ class SdbGridReader():
             Evolutionary model (MESA profile file) as MesaData object.
         """
 
-        self.extract_evol_model(log_dir, top_dir, he4, temp_dir)
-        temp_file = os.path.join(temp_dir, self.evol_model_name(he4))
-        data = mesa.MesaData(temp_file)
-        if delete_temp:
-            os.remove(temp_file)
+        self.extract_evol_model(log_dir, top_dir, he4, dest_dir, keep_tree)
+        if keep_tree:
+            file_name = os.path.join(
+                dest_dir, top_dir, log_dir, self.evol_model_name(he4))
+        else:
+            file_name = os.path.join(dest_dir, self.evol_model_name(he4))
+        data = mesa.MesaData(file_name)
+        if delete_file and not keep_tree:
+            os.remove(file_name)
         return data
-    
-    def read_puls_model(self, log_dir, top_dir, he4, temp_dir='.', delete_temp=True):
+
+    def read_puls_model(self, log_dir, top_dir, he4, dest_dir='.', delete_file=True,
+                        keep_tree=False):
         """Reads a calculated GYRE model and returns
         a GyreData object.
 
@@ -98,10 +119,15 @@ class SdbGridReader():
             Top directory.
         he4 : float
             Central helium abundance of the required model.
-        temp_dir : str, optional
+        dest_dir : str, optional
             Temporary dirctory for the required model. Default: '.'.
-        delete_temp : bool, optional
-            If True delete the temporary model. Default: True.
+        delete_file : bool, optional
+            If True delete the extracted model. The model is not deleted
+            if 'keep_tree' is True. Default: True.
+        keep_tree : bool, optional
+            If True extract file with its directory structure (default
+            ZipFile.extract behaviour), otherwise extract file directly to
+            'dest_dir'. Default: False.
 
         Returns
         ----------
@@ -109,14 +135,18 @@ class SdbGridReader():
             Pulsation model as GyreData object.
         """
 
-        self.extract_puls_model(log_dir, top_dir, he4, temp_dir)
-        temp_file = os.path.join(temp_dir, self.puls_model_name(he4))
-        data = gyre_data.GyreData(temp_file)
-        if delete_temp:
-            os.remove(temp_file)
+        self.extract_puls_model(log_dir, top_dir, he4, dest_dir, keep_tree)
+        if keep_tree:
+            file_name = os.path.join(
+                dest_dir, top_dir, log_dir, self.puls_model_name(he4))
+        else:
+            file_name = os.path.join(dest_dir, self.puls_model_name(he4))
+        data = gyre_data.GyreData(file_name)
+        if delete_file and not keep_tree:
+            os.remove(file_name)
         return data
-    
-    def extract_history(self, log_dir, top_dir, dest_dir, rename=False):
+
+    def extract_history(self, log_dir, top_dir, dest_dir, rename=False, keep_tree=False):
         """Extracts a MESA history file.
 
         Parameters
@@ -126,10 +156,15 @@ class SdbGridReader():
         top_dir : str
             Top directory.
         dest_dir : str
-            Destination directory.
+            Destination directory for the extracted model if 'keep_tree' is False,
+            or the root direcotry if 'keep_tree' is True.
         rename : bool
             If True it renames the history file to include information about
             the model contained in log_dir. Default: False.
+        keep_tree : bool, optional
+            If True extract file with its directory structure (default
+            ZipFile.extract behaviour), otherwise extract file directly to
+            'dest_dir'. Default: False.
 
         Returns
         ----------
@@ -141,10 +176,13 @@ class SdbGridReader():
         dest_path = os.path.join(dest_dir, history_name)
 
         with ZipFile(grid_zip_file) as archive:
-            with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
-                shutil.copyfileobj(zipped_file, dest_file)
+            if keep_tree:
+                archive.extract(grid_zip_path, dest_dir)
+            else:
+                with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                    shutil.copyfileobj(zipped_file, dest_file)
 
-    def extract_evol_model(self, log_dir, top_dir, he4, dest_dir):
+    def extract_evol_model(self, log_dir, top_dir, he4, dest_dir, keep_tree=False):
         """Extracts a single evolutionary model (a profile).
 
         Parameters
@@ -156,7 +194,12 @@ class SdbGridReader():
         he4 : float
             Central helium abundance of the required model.
         dest_dir : str
-            Destination directory.
+            Destination directory for the extracted model if 'keep_tree' is False,
+            or the root direcotry if 'keep_tree' is True.
+        keep_tree : bool, optional
+            If True extract file with its directory structure (default
+            ZipFile.extract behaviour), otherwise extract file directly to
+            'dest_dir'. Default: False.
 
         Returns
         ----------
@@ -169,10 +212,13 @@ class SdbGridReader():
 
         with ZipFile(grid_zip_file) as archive:
             if grid_zip_path in archive.namelist():
-                with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
-                    shutil.copyfileobj(zipped_file, dest_file)
+                if keep_tree:
+                    archive.extract(grid_zip_path, dest_dir)
+                else:
+                    with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                        shutil.copyfileobj(zipped_file, dest_file)
 
-    def extract_puls_model(self, log_dir, top_dir, he4, dest_dir):
+    def extract_puls_model(self, log_dir, top_dir, he4, dest_dir, keep_tree=False):
         """Extracts a single calculated GYRE model.
 
         Parameters
@@ -184,7 +230,12 @@ class SdbGridReader():
         he4 : float
             Central helium abundance of the required model.
         dest_dir : str
-            Destination directory.
+            Destination directory for the extracted model if 'keep_tree' is False,
+            or the root direcotry if 'keep_tree' is True.
+        keep_tree : bool, optional
+            If True extract file with its directory structure (default
+            ZipFile.extract behaviour), otherwise extract file directly to
+            'dest_dir'. Default: False.
 
         Returns
         ----------
@@ -197,10 +248,13 @@ class SdbGridReader():
 
         with ZipFile(grid_zip_file) as archive:
             if grid_zip_path in archive.namelist():
-                with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
-                    shutil.copyfileobj(zipped_file, dest_file)
+                if keep_tree:
+                    archive.extract(grid_zip_path, dest_dir)
+                else:
+                    with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                        shutil.copyfileobj(zipped_file, dest_file)
 
-    def extract_gyre_input_model(self, log_dir, top_dir, he4, dest_dir):
+    def extract_gyre_input_model(self, log_dir, top_dir, he4, dest_dir, keep_tree=False):
         """Extracts a single GYRE input model.
 
         Parameters
@@ -212,7 +266,12 @@ class SdbGridReader():
         he4 : float
             Central helium abundance of the required model.
         dest_dir : str
-            Destination directory.
+            Destination directory for the extracted file if 'keep_tree' is False,
+            or the root direcotry if 'keep_tree' is True.
+        keep_tree : bool, optional
+            If True extract file with its directory structure (default
+            ZipFile.extract behaviour), otherwise extract file directly to
+            'dest_dir'. Default: False.
 
         Returns
         ----------
@@ -225,8 +284,11 @@ class SdbGridReader():
 
         with ZipFile(grid_zip_file) as archive:
             if grid_zip_path in archive.namelist():
-                with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
-                    shutil.copyfileobj(zipped_file, dest_file)
+                if keep_tree:
+                    archive.extract(grid_zip_path, dest_dir)
+                else:
+                    with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
+                        shutil.copyfileobj(zipped_file, dest_file)
 
     def evol_model_exists(self, log_dir, top_dir, he4):
         """Checks if a profile exists in archive.
@@ -389,11 +451,11 @@ if __name__ == "__main__":
     top_dir = 'logs_mi1.0_z0.015_lvl0'
     log_dir = 'logs_mi1.0_menv0.0001_rot0.0_z0.015_y0.2715_fh0.0_fhe0.0_fsh0.0_mlt1.8_sc0.1_reimers0.0_blocker0.0_turbulence0.0_lvl0_15240'
     he4 = 0.5
-    # destination = os.getcwd()
-    # g.extract_evol_model(log_dir, top_dir, he4, destination)
+    destination = os.getcwd()
+    # g.extract_evol_model(log_dir, top_dir, he4, destination, keep_tree=True)
 
-    # data = g.read_evol_model(log_dir, top_dir, he4)
-    data = g.read_puls_model(log_dir, top_dir, he4)
+    # data = g.read_evol_model(log_dir, top_dir, he4, keep_tree=True)
+    # data = g.read_puls_model(log_dir, top_dir, he4)
 
     # print(g.data.head())
 
