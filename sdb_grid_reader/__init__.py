@@ -290,6 +290,30 @@ class SdbGridReader():
                     with archive.open(grid_zip_path) as zipped_file, open(dest_path, 'wb') as dest_file:
                         shutil.copyfileobj(zipped_file, dest_file)
 
+    def extract_log_dir(self, log_dir, top_dir, dest_dir):
+        """Extracts a MESA log directory.
+
+        Parameters
+        ----------
+        log_dir : str
+            Log directory.
+        top_dir : str
+            Top directory.
+        dest_dir : str
+            Destination directory for the extracted directory tree.
+
+        Returns
+        ----------
+        """
+
+        grid_zip_file = os.path.join(self.grid_dir, self.archive_name(top_dir))
+        grid_zip_path = os.path.join(top_dir, log_dir)
+
+        with ZipFile(grid_zip_file) as archive:
+            for f_name in archive.namelist():
+                if f_name.startswith(grid_zip_path):
+                    archive.extract(f_name, dest_dir)
+
     def evol_model_exists(self, log_dir, top_dir, he4):
         """Checks if a profile exists in archive.
 
@@ -453,6 +477,7 @@ if __name__ == "__main__":
     he4 = 0.5
     destination = os.getcwd()
     # g.extract_evol_model(log_dir, top_dir, he4, destination, keep_tree=True)
+    # g.extract_log_dir(log_dir, top_dir, destination)
 
     # data = g.read_evol_model(log_dir, top_dir, he4, keep_tree=True)
     # data = g.read_puls_model(log_dir, top_dir, he4)
