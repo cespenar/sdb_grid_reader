@@ -12,11 +12,49 @@ import gyre_data
 
 
 class SdbGridReader():
+    """Structure containing a processed MESA grid of sdB stars.
+
+    Reads a grid and provides methods to extract and read models.
+
+    Parameters
+    ----------
+    db_file : str
+        Database containing the grid of models.
+    grid_dir : str
+        Directory containing the zipped grid of models.
+
+    Attributes
+    ----------
+    db_file : str
+        Path to the input database. 
+    grid_dir : str
+        Path to the directory containing the zipped grid of models.
+    data : DataFrame
+        Pandas DataFrame containing the grid.
+
+    Examples
+    ----------
+    >>> database = 'sdb_grid_cpm.db'
+    >>> grid_dir = 'grid_sdb'
+    >>> g = SdbGridReader(database, grid_dir)
+
+    Here `database` is the database containing the processed grid of
+    calcualted MESA sdB models and `grid_dir` is the directory containing
+    the full compressed grid. The grid is then initialized.
     """
 
-    """
+    def __init__(self, db_file, grid_dir):
+        """Creates SdbGridReader object from a processed
+        grid of MESA sdB models.
 
-    def __init__(self, db_file, grid_dir, zipped_dir=True):
+        Parameters
+        ----------
+        db_file : str
+            Database containing the grid of models.
+        grid_dir : str
+            Directory containing the zipped grid of models.
+        """
+        
         self.db_file = db_file
         self.grid_dir = grid_dir
         engine = create_engine(f'sqlite:///{self.db_file}')
