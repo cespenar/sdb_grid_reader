@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 
-import gyre_data
+import gyre_reader
 
 
 class SdbGridReader():
@@ -182,7 +182,7 @@ class SdbGridReader():
             file_name = os.path.join(dest_dir, self.puls_model_name(he4))
         if not self.model_extracted(file_name):
             self.extract_puls_model(log_dir, top_dir, he4, dest_dir, keep_tree)
-        data = gyre_data.GyreData(file_name)
+        data = gyre_reader.GyreData(file_name)
         if delete_file and not keep_tree:
             os.remove(file_name)
         return data
