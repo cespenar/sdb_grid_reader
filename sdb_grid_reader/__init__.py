@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 import gyre_reader
 
 
-class SdbGridReader():
+class SdbGrid():
     """Structure containing a processed MESA grid of sdB stars.
 
     Reads a grid and provides methods to extract and read models.
@@ -36,7 +36,7 @@ class SdbGridReader():
     ----------
     >>> database = 'sdb_grid_cpm.db'
     >>> grid_dir = 'grid_sdb'
-    >>> g = SdbGridReader(database, grid_dir)
+    >>> g = SdbGrid(database, grid_dir)
 
     Here `database` is the database containing the processed grid of
     calcualted MESA sdB models and `grid_dir` is the directory containing
@@ -44,7 +44,7 @@ class SdbGridReader():
     """
 
     def __init__(self, db_file, grid_dir):
-        """Creates SdbGridReader object from a processed
+        """Creates SdbGrid object from a processed
         grid of MESA sdB models.
 
         Parameters
@@ -54,11 +54,17 @@ class SdbGridReader():
         grid_dir : str
             Directory containing the zipped grid of models.
         """
-        
+
         self.db_file = db_file
         self.grid_dir = grid_dir
         engine = create_engine(f'sqlite:///{self.db_file}')
         self.data = pd.read_sql('models', engine)
+
+    def __str__(self):
+        return f"SdbGrid based on '{self.db_file}' database and with models located at '{self.grid_dir}'"
+
+    def __repr__(self):
+        return f"SdbGrid(db_file={self.db_file}, grid_dir={self.grid_dir})"
 
     def read_history(self, log_dir, top_dir, he4, dest_dir='.', delete_file=True,
                      rename=False, keep_tree=False):
@@ -531,7 +537,7 @@ class SdbGridReader():
 if __name__ == "__main__":
     database = '/Users/cespenar/sdb/sdb_grid_cpm.db'
     grid_dir = '/Volumes/T3_2TB/sdb/grid_sdb'
-    g = SdbGridReader(database, grid_dir)
+    g = SdbGrid(database, grid_dir)
 
     top_dir = 'logs_mi1.0_z0.015_lvl0'
     log_dir = 'logs_mi1.0_menv0.0001_rot0.0_z0.015_y0.2715_fh0.0_fhe0.0_fsh0.0_mlt1.8_sc0.1_reimers0.0_blocker0.0_turbulence0.0_lvl0_15240'
