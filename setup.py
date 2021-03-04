@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='sdb_grid_reader',
-    version='0.0.2',
+    version='0.0.3',
     description='Tool for accessing a processed grid of MESA sdB models.',
     url='https://github.com/cespenar/sdb_grid_reader',
     author='Jakub Ostrowski',
